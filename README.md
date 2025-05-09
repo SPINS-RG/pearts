@@ -65,3 +65,4 @@ sudo udevadm trigger
 ```
 sudo apt install libhidapi-hidraw0
 ```
+5. Run vscode debug using the "Pico Debug (Cortex-Debug)"  launcher
