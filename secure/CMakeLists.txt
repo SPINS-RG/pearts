@@ -86,6 +86,9 @@ target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../nsc)
 target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../pico-sdk/include)
 target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../drivers/rp2_common/hardware_sync/include)
 target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../drivers/rp2_common/hardware_sync_spin_lock/include)
+target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../drivers/rp2_common/pico_sha256/include)
+target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../drivers/rp2_common/hardware_dma/include)
+target_include_directories(secure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../drivers/rp2_common/hardware_sha256/include)
 
 #include lbrary cmsis_core
 target_link_libraries(secure PRIVATE 

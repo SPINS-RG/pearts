@@ -21,16 +21,21 @@
     __stack (== StackTop)
 */
 
+/*
+    //FLASH(rx) : ORIGIN = 0x10100000, LENGTH =  3141632 
+    //RAM(rwx) : ORIGIN =  0x20012000, LENGTH =  448k
+    
+*/
+
 MEMORY                     
 {
-
-    
-    FLASH(rx) : ORIGIN = 0x10100000, LENGTH =  3141632 /*(3 * 1024 * 1024 - 4k)   change to 0x10200000U*/
+    FLASH(rx) : ORIGIN = 0x10100000, LENGTH =  2097152 /*(2 * 1024 * 1024 )   change to 0x10200000U*/
+    FLASH_ESR(rx) : ORIGIN = 0x10300000, LENGTH =  1044480 /*(1024 * 1024 - 4k)   change to 0x10200000U*/
     VENEERS (rx) : ORIGIN = 0x103FF000, LENGTH = 4K /* Adjust as needed */
-    RAM(rwx) : ORIGIN =  0x20012000, LENGTH =  448k
+    RAM(rwx) : ORIGIN =  0x20012000, LENGTH =  327680  /* 448k */
+    RAM_ESR(rwx) : ORIGIN =  0x20062000, LENGTH =  122800  /* 448k*/
     SCRATCH_X(rwx) : ORIGIN = 0x20080000, LENGTH = 4k
     SCRATCH_Y(rwx) : ORIGIN = 0x20081000, LENGTH = 4k
-    
 }
 
 ENTRY(_entry_point)
@@ -103,6 +108,44 @@ SECTIONS
         *(.eh_frame*)
         . = ALIGN(4);
     } > FLASH
+
+
+    .esr_data_ram : 
+    {
+        . = ALIGN(4);
+        __s_esr_data_ram_start = .;
+        KEEP(*(.esr_data_ram))
+        __s_esr_data_ram_end = .;
+    }   > RAM_ESR AT > FLASH_ESR
+
+    __s_esr_data_ram_init = LOADADDR(.esr_data_ram);
+
+    .esr_code_flash :
+    {
+        . = ALIGN(4);
+        __s_esr_code_flash_start = .;
+        KEEP(*(.esr_code_flash))
+        __s_esr_code_flash_end = .;
+    }   > FLASH_ESR 
+    
+    .esr_data_flash :
+    {
+        . = ALIGN(4);
+        __s_esr_data_flash_start = .;
+        KEEP(*(.esr_data_flash))
+        __s_esr_data_flash_end = .;
+    }   > FLASH_ESR 
+    
+
+    .esr_data_ram_dynamic : 
+    {
+        . = ALIGN(4);
+        __s_esr_data_ram_dynamic_start = .;
+        KEEP(*(.esr_data_ram_dynamic))
+        __s_esr_data_ram_dynamic_end = .;
+    }   > RAM_ESR AT > FLASH_ESR
+
+
 
     /* Note the boot2 section is optional, and should be discarded if there is
        no reference to it *inside* the binary, as it is not called by the

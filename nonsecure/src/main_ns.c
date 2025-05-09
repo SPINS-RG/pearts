@@ -11,6 +11,7 @@
 #include "cmsis_os2.h"
 #include "cmsis_os.h"
 #include "secure_init.h"
+#include "shadow_task.h"
 
 void StartDefaultLauncher(void *argument);
 void StartDefaultTask2(void *argument);
@@ -20,6 +21,7 @@ void StartDefaultTask3(void *argument);
 osThreadId_t defaultTaskHandle;
 osThreadId_t defaultTaskHandle2;
 osThreadId_t defaultTaskHandle3;
+osThreadId_t shadowTaskHandle;
 
 const osThreadAttr_t defaultTask_attributes = {
         .name = "defaultTask",
@@ -35,6 +37,12 @@ const osThreadAttr_t defaultTask2_attributes = {
 
 const osThreadAttr_t defaultTask3_attributes = {
         .name = "defaultTask3",
+        .priority = (osPriority_t) osPriorityNormal,
+        .stack_size = 128 * 4
+        };
+
+const osThreadAttr_t shadow_task_attributes = {
+        .name = "shadow_task",
         .priority = (osPriority_t) osPriorityNormal,
         .stack_size = 128 * 4
         };
@@ -98,6 +106,7 @@ void StartDefaultTask3(void *argument){
 void StartDefaultLauncher(void *argument){
         defaultTaskHandle2 = osThreadNew(StartDefaultTask2, NULL, &defaultTask2_attributes);
         defaultTaskHandle3 = osThreadNew(StartDefaultTask3, NULL, &defaultTask3_attributes);
+        shadowTaskHandle = osThreadNew(rtpox_init_task, NULL, &shadow_task_attributes);
 
         /* End initial task */
         osThreadExit();

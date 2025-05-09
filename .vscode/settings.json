@@ -63,7 +63,10 @@
         "cmsis_os.h": "c",
         "stdint.h": "c",
         "filesystem": "c",
-        "secure_init.h": "c"
+        "secure_init.h": "c",
+        "locale": "c",
+        "string": "c",
+        "sha256.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": false
 }

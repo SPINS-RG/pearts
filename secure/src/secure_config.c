@@ -13,12 +13,12 @@ void configure_sau(void)
     SAU->RBAR = 0x100FFC00 & SAU_RBAR_BADDR_Msk;
     SAU->RLAR = (0x100FFFFF & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk | SAU_RLAR_NSC_Msk;
 
-    // Region 1: Mark FLASH (excluding NSC) as Secure
+    // Region 1: Mark FLASH (excluding NSC) as NonSecure
     SAU->RNR  = 1;
     SAU->RBAR =  0x10100000 & SAU_RBAR_BADDR_Msk;
     SAU->RLAR = (0x10400000 & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk;
 
-    // Region 2: Mark Secure RAM
+    // Region 2: Mark Non Secure RAM
     SAU->RNR  = 2;
     SAU->RBAR = 0x20012000 & SAU_RBAR_BADDR_Msk;
     SAU->RLAR = (0x20082000 & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk;
@@ -36,6 +36,12 @@ void configure_sau(void)
     // Enable SAU
     SAU->CTRL = SAU_CTRL_ENABLE_Msk;
 }
+
+
+
+
+
+
 
 void system_init(void){
     /* Init float registers */  
