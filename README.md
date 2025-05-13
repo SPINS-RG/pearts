@@ -1,7 +1,8 @@
 # PEARTS: Provable Execution in Real-Time Embedded Systems
+### Note: This is a prototype, not safe to use in production
 
+We are porting Pearts for pico 2, the full version will be available soon.
 
-Implementation for raspbery pi pico 2
 
 
 # Config environment (ubuntu24)
