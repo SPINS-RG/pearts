@@ -2,76 +2,15 @@
 #include <stdint.h>
 #include <string.h>
 #include "rtpox_port.h"
+#include "rtpox.h"
 #include "_rp2350.h"
+#include "hardware/structs/scb.h"
+#include "var_auto_gen.h"
 
-#define ESR_FLASH_MEMORY_SIZE 0x1000 // Size of the elastic secure region
-#define ESR_FLASH_MEMORY_START 0x20000000 // Start address of the elastic secure region
-
-#define ESR_RAM_MEMORY_SIZE 0x1000 // Size of the elastic secure region in RAM
-#define ESR_RAM_MEMORY_START 0x20001000 // Start address of the elastic secure region in RAM
-
-#define PASSWORD_INIT 0xFF22AA22 // Initial password to test if the context is initialized
-
-// STATUS
-#define ACTIVE   0x2f2f2f2
-#define INACTIVE 0
-
-typedef enum {
-    FALSE = 0,
-    TRUE = 1
-} boolean_t;
-
-
-typedef enum {
-    RTPOX_ALREADY_ACTIVE,
-    RTPOX_SUCESS,
-} rtpox_error_t;
-
-
-typedef uint32_t rtpox_status_t;
-
-typedef struct {
-    int dummy; // Placeholder for actual structure members
-} rtpox_shadow_task_t;
-
-
-typedef enum ACTIVE_VTOR{
-    NS_VTOR = 0,
-    ESR_VTOR = 1
-} active_vtor_t;
-
-typedef struct {
-    uint32_t *      NS_VTOR;
-    uint32_t *      ESR_VTOR; 
-    uint32_t *      esr_task_psp;
-    active_vtor_t   active_vtor;
-    uint32_t        status;
-    uint32_t        init_password;
-} rtpox_context_t;
-
-typedef struct {
-    int dummy; // Placeholder for actual structure members
-} rtpox_esr_t;
-
-
-
-typedef struct {
-    uint32_t clock;
-    uint32_t status[3];
-}   rtpox_time_record_t;
-    
-
-typedef struct{
-    char key[16]; // Placeholder for actual key ->>> not safe 
-    char binary_signature[16];
-    rtpox_time_record_t time_record[20];
-    char hash_binary[32];
-} rtpox_report_t;
 
 rtpox_context_t rtpox_context;
-
-
 rtpox_report_t report;
+
 
 void rtpox_esr_reset_handler(void);
 
@@ -147,34 +86,23 @@ boolean_t rtpox_is_esr(uint32_t address){
            (address >= ESR_RAM_MEMORY_START && address < (ESR_RAM_MEMORY_START + ESR_RAM_MEMORY_SIZE));
 }
 
-
 void rtpox_shrink(void){
-    __disable_irq();
     rtpox_sau_disable();
     rtpox_configure_sau_nonsecure(ESR_FLASH_MEMORY_START, ESR_FLASH_MEMORY_START+ESR_FLASH_MEMORY_SIZE, 5);
     rtpox_configure_sau_nonsecure(ESR_RAM_MEMORY_START, ESR_RAM_MEMORY_START+ESR_RAM_MEMORY_SIZE, 6);
-    // Memory barrier
-    __DSB();
-    __ISB();
-    rtpox_sau_enable();
-    __enable_irq();
+    rtpox_sau_enable();    
 }
 
 void rtpox_expand(void){
-    __disable_irq();
     rtpox_sau_disable();
     rtpox_configure_sau_secure(ESR_FLASH_MEMORY_START, ESR_FLASH_MEMORY_START+ESR_FLASH_MEMORY_SIZE, 5);
     rtpox_configure_sau_secure(ESR_RAM_MEMORY_START, ESR_RAM_MEMORY_START+ESR_RAM_MEMORY_SIZE, 6);
-    // Memory barrier
-    __DSB();
-    __ISB();
     rtpox_sau_enable();
-    __enable_irq();
 }
 
 void rtpox_esr_reset_handler(void){
     // Reset the elastic secure region
-    rtpox_shrink();
+    // rtpox_shrink();
 }
 
 /*
@@ -216,42 +144,139 @@ void rtpox_switch_to_esr(void){
 void rtpox_switch_to_ns(void){
 }
 
-
-
 /*
 #########################################
 #########################################
 */
 
 
-rtpox_error_t rtpox_init(void)
+
+#define ADDR_rtpox_esr_psp_reserve_size 255
+#define ADDR_rtpox_esr_vtr_reserve_size 64 
+
+
+
+void rtpox_config_esr_vtor(){
+    uint32_t * ptr_esr = (uint32_t*) ADDR_rtpox_esr_vtr_reserve;
+    
+    // redirect systick
+    ptr_esr[15] = 0xF0F0F0F0;
+}
+
+void rtpox_copy_vtor(){
+    uint32_t * ptr_nsvtor = (uint32_t*)scb_ns_hw->vtor;
+    uint32_t * ptr_esr = (uint32_t*) ADDR_rtpox_esr_vtr_reserve;
+    for (int i=0;i<ADDR_rtpox_esr_vtr_reserve_size;i++) ptr_esr[i] = ptr_nsvtor[i];
+    
+}
+
+__force_inline void rtpox_switch_vtor_ns_to_esr(){
+    scb_ns_hw->vtor = rtpox_context.ESR_VTOR;
+}
+
+__force_inline void rtpox_switch_vtor_esr_to_ns(){
+    scb_ns_hw->vtor = rtpox_context.NS_VTOR;
+}
+
+__force_inline void rtpox_switch_psp_esr_to_ns(){
+    // get current esr_psp
+    rtpox_context.esr_psp = (uint32_t )__TZ_get_PSP_NS();
+
+    // set psp_ns to the current psp
+    __TZ_set_PSP_NS(ADDR_rtpox_st_tmp_reserved);
+
+    uint32_t * nspsp = (uint32_t *)ADDR_rtpox_st_tmp_reserved;
+    nspsp[7] = 0x1000000;
+    nspsp[6] = (uint32_t) ADDR_rtpox_trig_resume;
+}
+
+__force_inline void rtpox_switch_psp_ns_to_esr(){
+    rtpox_context.ns_psp = (uint32_t )__TZ_get_PSP_NS();
+    __TZ_set_PSP_NS(rtpox_context.esr_psp);
+}
+
+
+void rtpox_switch_esr_to_ns(){
+    rtpox_expand();
+    rtpox_switch_psp_esr_to_ns();
+    rtpox_switch_vtor_esr_to_ns();
+}
+ 
+void rtpox_switch_ns_psp_to_esr(){
+    rtpox_shrink();
+    rtpox_switch_psp_ns_to_esr();
+    rtpox_switch_vtor_ns_to_esr();
+}
+
+
+
+
+rtpox_error_t rtpox_init(uint32_t return_address)
 {
+    __disable_irq();
+    
     // Test password
     if(rtpox_context.init_password != PASSWORD_INIT ) rtpox_reset_handler();
-
-    // test if rtpox is active
-    if(rtpox_context.status == ACTIVE) {
-        return RTPOX_ALREADY_ACTIVE;
-    }
-
-
-
-    // expand esr
-    rtpox_expand();
-
-    // attest the context
-    rtpox_attest_esr();
-
-
     
-    rtpox_ns_stack_to_entry_task();
+    // save est context
+    rtpox_context.exit_address = (uint32_t)return_address;
+    rtpox_context.active_vtor = ESR_VTOR;
+    rtpox_context.NS_VTOR = (uint32_t)scb_ns_hw->vtor;
+    rtpox_context.ESR_VTOR = (uint32_t)ADDR_rtpox_esr_vtr_reserve;
+    rtpox_context.ns_psp = __TZ_get_PSP_NS();
+    rtpox_context.esr_psp = ADDR_rtpox_esr_psp_reserve + ADDR_rtpox_esr_psp_reserve_size;
+    rtpox_context.shadow_task_initial_psp = (uint32_t)rtpox_context.ns_psp ;
+    
+    // copy ADDR_rtpox_esr_entry to stack position 3
+    rtpox_switch_ns_psp_to_esr();
+    
+    // Set the return address from the secure call to the entry point of the elastic secure region
+    uint32_t *stack;
+    stack = (uint32_t *)__get_PSP();
+    stack[11] = (ADDR_rtpox_esr_entry & ~(0x1u) ); 
+    
+    rtpox_context.status = ACTIVE;
+    
+    // rtpox_init_esr_psp();
+    
+    
+    // Copy ns vtor to 
+    rtpox_copy_vtor();
+    rtpox_config_esr_vtor();
+    
+    
+    // rtpox_shrink(); 
+    // rtpox_switch_ns_psp_to_esr();
+    // rtpox_switch_vtor_ns_to_esr();
+    rtpox_switch_ns_psp_to_esr();
 
+
+    __enable_irq();
+    
     return RTPOX_SUCESS;
 }
 
 
 rtpox_error_t rtpox_exit(void)
 {
+    //disable interrupt
+    __disable_irq();
+
+    // set the nonsecure pointer 
+    __TZ_set_PSP_NS(rtpox_context.shadow_task_initial_psp);
+
+    // set the return address of the secure world to the end of the shadow stack entry function 
+    uint32_t *stack;
+    stack = (uint32_t *)__get_PSP();
+    stack[7] = (rtpox_context.exit_address & ~(0x1u) ); 
+    
+    rtpox_switch_vtor_esr_to_ns();
+    rtpox_shrink();
+
+
+    //enable interrupt
+    __enable_irq();
+
     return RTPOX_SUCESS;
 }
 

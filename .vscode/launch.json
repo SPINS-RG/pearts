@@ -3,14 +3,14 @@
     "configurations": [
         {
             "name": "Pico Debug (Cortex-Debug)",
-            "cwd": "/home/ajoianeto/.pico-sdk/openocd/0.12.0+dev/scripts",
+            "cwd": "/home/ajoia/.pico-sdk/openocd/0.12.0+dev/scripts",
             "executable": "${workspaceRoot}/build_secure/secure/secure.elf",
             "request": "launch",
             "type": "cortex-debug",
             "servertype": "openocd",
             // "serverpath": "${userHome}/.pico-sdk/openocd/0.12.0+dev/openocd.exe",
-            "serverpath": "/home/ajoianeto/.pico-sdk/openocd/0.12.0+dev/openocd.exe",
-            "gdbPath": "arm-none-eabi-gdb",
+            "serverpath": "/home/ajoia/.pico-sdk/openocd/0.12.0+dev/openocd",
+            "gdbPath": "/home/ajoia/.pico-sdk/toolchain/14_2_Rel1/bin/arm-none-eabi-gdb",
             "device": "RP2350",
             "configFiles": [
                 "interface/cmsis-dap.cfg",

@@ -1,7 +1,9 @@
 
 #include "_rp2350.h"
+#include "rtpox.h"
+#include "var_auto_gen.h"
 
-
+#include "hardware/structs/scb.h"
 // void hard_fault_handler_c(uint32_t* stack)
 // {
 //     uint32_t r0  = stack[0];
@@ -26,13 +28,6 @@
 
 __attribute__((naked)) void HardFault_Handler(void)
 {
-    // __asm volatile (
-    //     "tst lr, #4          \n"  // Check EXC_RETURN
-    //     "ite eq              \n"
-    //     "mrseq r0, msp       \n"  // If equal, use MSP
-    //     "mrsne r0, psp       \n"  // Else use PSP
-    //     "b hard_fault_handler_c \n"
-    // );
     while (1)
     {
         /* code */
@@ -59,20 +54,29 @@ void BusFault_Handler(void) {
 }
 
 void UsageFault_Handler(void) {
-    // __asm volatile (
-    //     "tst lr, #4          \n"  // Check EXC_RETURN
-    //     "ite eq              \n"
-    //     "mrseq r0, msp       \n"  // If equal, use MSP
-    //     "mrsne r0, psp       \n"  // Else use PSP
-    //     "b hard_fault_handler_c \n"
-    // );
     // Handle Usage Fault exception
     // This is a placeholder function. Actual implementation will depend on the specific requirements.
     while(1){}
 }
+
 void SecureFault_Handler(void) {
-    // Handle Secure Fault exception
-    // This is a placeholder function. Actual implementation will depend on the specific requirements.
+    // get msp-ns
+    uint32_t * msp_ns = (uint32_t *) __TZ_get_MSP_NS();
+
+    // check if fault came from the systick key and if systick is active
+    if ((msp_ns[6] == SYSTICK_KEY)
+        && ( scb_ns_hw->shcsr & (1 << 11) )){ 
+        
+        // change retunr address from the ns-msp stack
+        msp_ns[6] = ADDR_SysTick_Handler;
+        // set thumb on xpsr
+        msp_ns[7] |= 0x1000000;
+        
+        rtpox_switch_esr_to_ns();
+        return;
+    }
+    
+    // trap the fault otherwise
     while(1){}
 }
 

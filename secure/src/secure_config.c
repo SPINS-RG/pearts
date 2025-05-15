@@ -21,7 +21,7 @@ void configure_sau(void)
     // Region 2: Mark Non Secure RAM
     SAU->RNR  = 2;
     SAU->RBAR = 0x20012000 & SAU_RBAR_BADDR_Msk;
-    SAU->RLAR = (0x20082000 & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk;
+    SAU->RLAR = (0x20083000 & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk;
 
     // Region 1: Mark FLASH (excluding NSC) as Secure
     SAU->RNR  = 3;

@@ -29,7 +29,8 @@ Configure the vscode launcher
 
 Now we need to make the debug probe accessible by the user.
 
-0. Create a new group that will have access to the debug probe (this is not necessary, you can just use any group that you have)
+
+Create a new group that will have access to the debug probe (this is not necessary, you can just use any group that you already have)
 
 Create group:
 ```
@@ -46,24 +47,24 @@ Test if the user is in the group
 groups $USER
 ```
 
-1. Create udev rule 
+### 1. Create udev rule 
 ```
 sudo vim /etc/udev/rules.d/60-cmsis-dap.rules
 ```
 
-2.  Add the following line
+### 2.  Add the following line
 ```
 SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000c", MODE="0666", GROUP="debugprobe"
 ```
 
-3. Reload udev rules and replug the device
+### 3. Reload udev rules and replug the device
 ```
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-4.  You may need install this library or other libraries
+### 4.  You may need install this library or other libraries
 ```
 sudo apt install libhidapi-hidraw0
 ```
-5. Run vscode debug using the "Pico Debug (Cortex-Debug)"  launcher
+### 5. Run vscode debug using the "Pico Debug (Cortex-Debug)"  launcher

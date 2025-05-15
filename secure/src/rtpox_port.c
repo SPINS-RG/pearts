@@ -10,18 +10,21 @@ Code related to the secure access unit (SAU)
 ##########################################
 */
 
-__always_inline void rtpox_configure_sau_secure(uint32_t address_init, uint32_t address_end, uint32_t region_number){
-    SAU->RNR  = region_number;
-    SAU->RBAR = address_init & SAU_RBAR_BADDR_Msk;
-    SAU->RLAR = (address_end & SAU_RLAR_LADDR_Msk) & ~SAU_RLAR_ENABLE_Msk;
-}
-
 __always_inline void rtpox_configure_sau_nonsecure(uint32_t address_init, uint32_t address_end, uint32_t region_number){
     SAU->RNR  = region_number;
     SAU->RBAR = address_init & SAU_RBAR_BADDR_Msk;
-    SAU->RLAR = (address_end & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk;
+    SAU->RLAR = (address_end & SAU_RLAR_LADDR_Msk) & ~SAU_RLAR_ENABLE_Msk;
+    __DSB();
+    __ISB();
 }
 
+__always_inline void rtpox_configure_sau_secure(uint32_t address_init, uint32_t address_end, uint32_t region_number){
+    SAU->RNR  = region_number;
+    SAU->RBAR = address_init & SAU_RBAR_BADDR_Msk;
+    SAU->RLAR = (address_end & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk;
+    __DSB();
+    __ISB();
+}
 
 __always_inline void rtpox_configure_sau_nsc(uint32_t address_init, uint32_t address_end, uint32_t region_number){
     SAU->RNR  = region_number;
@@ -29,14 +32,25 @@ __always_inline void rtpox_configure_sau_nsc(uint32_t address_init, uint32_t add
     SAU->RLAR = (address_end & SAU_RLAR_LADDR_Msk) | SAU_RLAR_ENABLE_Msk | SAU_RLAR_NSC_Msk;
 }   
 
+
+
 __always_inline void rtpox_sau_disable(void){
     // Disable SAU
-    SAU->CTRL &= ~SAU_CTRL_ENABLE_Msk;
+    SAU->CTRL &= ~SAU_CTRL_ENABLE_Msk ;
 }
 
 __always_inline void rtpox_sau_enable(void){
     // Enable SAU
-    SAU->CTRL |= SAU_CTRL_ENABLE_Msk;
+    SAU->CTRL |= SAU_CTRL_ENABLE_Msk ;
+}
+
+
+
+
+
+__always_inline void rtpox_sau_nonsecure_when_deactivate(){
+    SAU->CTRL |= 0b1u;
+
 }
 
 /* 
@@ -65,6 +79,16 @@ void rtpox_hash_finalize(char *sha256_result){
     pico_sha256_finish(&sha256_state, (sha256_result_t*)sha256_result);
     pico_sha256_cleanup(&sha256_state);
 }
+
+
+/* 
+##########################################
+Code related to the Interrupts
+##########################################
+*/
+
+
+
 
 /* 
 ##########################################

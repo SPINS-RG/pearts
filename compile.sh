@@ -37,6 +37,22 @@ $CMAKECMD --build . --verbose #| tee ../nonsecure_build.log
 cd ..
 echo "[LOG] Nonsecure build completed."
 
+# generating auto-generated files
+echo "[LOG] Generating auto-generated files..."
+python scripts/gen_h_files.py
+echo "[LOG] Auto-generated files generated."
+
+# recompile secure firmware
+echo "[LOG] Rebuilding secure firmware with auto-generated files..."
+cd build_secure
+$CMAKECMD -G Ninja .. -DCMAKE_TOOLCHAIN_FILE=../toolchain/rp2350.cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_SECURE=1
+$CMAKECMD --build . --verbose #| tee ../secure_build.log
+cd ..
+echo "[LOG] Secure firmware rebuilt."
+# recompile non-secure firmware
+
+
+
 # --- Objdump (only after both builds are done) ---
 echo "[LOG] Generating disassembly files..."
 $OBJDUMP -D build_secure/secure/secure.elf > build_secure/secure/secure.elf.dis

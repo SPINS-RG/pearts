@@ -40,6 +40,10 @@
 #define TZ_START_NS (0x10100000)
 #endif
  
+
+uint32_t secure_psp_reserve[200];
+
+
 /* typedef for non-secure callback functions */
 typedef void (*funcptr_void) (void) __attribute__((cmse_nonsecure_call));
 
@@ -90,6 +94,10 @@ int main(void) {
   if (core_id == 1) {
     while(1) __WFI(); // Sleep core 1
   }
+
+
+  // set psp secure
+  __set_PSP((uint32_t)secure_psp_reserve+sizeof(secure_psp_reserve));
 
   /* Initialize the system */
   stdio_init_all();
