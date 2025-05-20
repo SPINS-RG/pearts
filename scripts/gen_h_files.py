@@ -49,7 +49,7 @@ definefile = "secure/include/var_auto_gen.h"
 functions = [
     "rtpox_esr_entry",
     "rtpox_esr_resume",
-    "rtpox_syscall_dispatch",
+    "rtpox_sc_dispatch",
     "rtpox_esr_psp_reserve",
     "rtpox_esr_vtr_reserve",
     "SysTick_Handler",

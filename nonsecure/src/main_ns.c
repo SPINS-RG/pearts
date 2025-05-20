@@ -1,4 +1,5 @@
-
+#include "FreeRTOS.h"
+#include "task.h"
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "nsc.h"
@@ -12,6 +13,7 @@
 #include "cmsis_os.h"
 #include "secure_init.h"
 #include "shadow_task.h"
+
 
 void StartDefaultLauncher(void *argument);
 void StartDefaultTask2(void *argument);
@@ -44,17 +46,19 @@ const osThreadAttr_t defaultTask3_attributes = {
 const osThreadAttr_t shadow_task_attributes = {
         .name = "shadow_task",
         .priority = (osPriority_t) osPriorityNormal,
-        .stack_size = 128 * 4
+        .stack_size = 128 * 8
         };
                 
 void init_systick(uint32_t uwTickFreq){
         // Disable SysTick
         systick_hw->csr = 0; 
-        systick_hw->rvr = 100000 - 1; // Set reload value
+        // systick_hw->rvr = 100000 - 1; // Set reload value
 
         // Set the SysTick frequency
-        SysTick_Config(SystemCoreClock / (1000U / (uint32_t)uwTickFreq)) ; // Set SysTick to 1ms
+        // SysTick_Config(SystemCoreClock / (1000U / (uint32_t)uwTickFreq)) ; // Set SysTick to 1ms
         
+        SysTick_Config(150000000 / (1000U / (uint32_t)uwTickFreq)) ; 
+
         // Enable SysTick interrupt
         NVIC_EnableIRQ(SysTick_IRQn); // 
         
@@ -88,6 +92,7 @@ int main(void){
 }
 
 void StartDefaultTask2(void *argument){
+        vTaskDelay(2);
         /* Infinite loop */
            while(1){
                 // Secure_Test_Call();

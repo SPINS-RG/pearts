@@ -47,7 +47,9 @@ typedef struct {
     uint32_t       NS_VTOR;
     uint32_t       ESR_VTOR; 
     uint32_t       esr_psp;
+    uint32_t       esr_psplim;
     uint32_t       ns_psp;
+    uint32_t       ns_psplim;
     active_vtor_t   active_vtor;
     uint32_t        exit_address;
     uint32_t        status;
@@ -82,6 +84,8 @@ rtpox_error_t rtpox_init(uint32_t return_address);
 rtpox_error_t rtpox_exit(void);
 void rtpox_switch_esr_to_ns(void);
 void rtpox_switch_ns_psp_to_esr(void);
-
+boolean_t rtpox_is_esr(uint32_t address);
+void rtpox_switch_resume_to_esr();
+void rtpox_switch_esr_to_syscall();
 
 #endif // RTPOX_H

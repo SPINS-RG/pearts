@@ -1,5 +1,10 @@
 #include "_rp2350.h"
 
+#define FAULT_STACK_OVERFLOW (0x1U << 20)
+#define FAULT_COPROCESSOR (0x1U << 19)
+#define FAULT_BAD_EXEC_RETURN (0x1U << 18)
+
+
 void HardFault_Handler(void) {
     // Handle HardFault exception
     // This is a placeholder function. Actual implementation will depend on the specific requirements.

@@ -68,7 +68,8 @@
         "string": "c",
         "sha256.h": "c",
         "rtpox_port.h": "c",
-        "rtpox.h": "c"
+        "rtpox.h": "c",
+        "stdlib.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": false
 }

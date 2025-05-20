@@ -149,12 +149,8 @@ void rtpox_switch_to_ns(void){
 #########################################
 */
 
-
-
 #define ADDR_rtpox_esr_psp_reserve_size 255
 #define ADDR_rtpox_esr_vtr_reserve_size 64 
-
-
 
 void rtpox_config_esr_vtor(){
     uint32_t * ptr_esr = (uint32_t*) ADDR_rtpox_esr_vtr_reserve;
@@ -166,8 +162,7 @@ void rtpox_config_esr_vtor(){
 void rtpox_copy_vtor(){
     uint32_t * ptr_nsvtor = (uint32_t*)scb_ns_hw->vtor;
     uint32_t * ptr_esr = (uint32_t*) ADDR_rtpox_esr_vtr_reserve;
-    for (int i=0;i<ADDR_rtpox_esr_vtr_reserve_size;i++) ptr_esr[i] = ptr_nsvtor[i];
-    
+    for (int i=0;i<ADDR_rtpox_esr_vtr_reserve_size;i++) ptr_esr[i] = ptr_nsvtor[i];    
 }
 
 __force_inline void rtpox_switch_vtor_ns_to_esr(){
@@ -178,23 +173,67 @@ __force_inline void rtpox_switch_vtor_esr_to_ns(){
     scb_ns_hw->vtor = rtpox_context.NS_VTOR;
 }
 
+
+#define ADDR_rtpox_st_tmp_reserved_size 40
 __force_inline void rtpox_switch_psp_esr_to_ns(){
+    /// ESR TO RESUME
     // get current esr_psp
     rtpox_context.esr_psp = (uint32_t )__TZ_get_PSP_NS();
+    rtpox_context.esr_psplim = (uint32_t )__TZ_get_PSPLIM_NS();
 
     // set psp_ns to the current psp
-    __TZ_set_PSP_NS(ADDR_rtpox_st_tmp_reserved);
 
-    uint32_t * nspsp = (uint32_t *)ADDR_rtpox_st_tmp_reserved;
+    uint32_t new_address = (uint32_t) ADDR_rtpox_st_tmp_reserved + ADDR_rtpox_st_tmp_reserved_size - 12;
+    __TZ_set_PSP_NS(new_address);
+    __TZ_set_PSPLIM_NS(0);
+
+    uint32_t * nspsp = (uint32_t *)new_address;
     nspsp[7] = 0x1000000;
     nspsp[6] = (uint32_t) ADDR_rtpox_trig_resume;
 }
 
-__force_inline void rtpox_switch_psp_ns_to_esr(){
+
+void __force_inline rtpox_save_ns_psp_context(){
     rtpox_context.ns_psp = (uint32_t )__TZ_get_PSP_NS();
-    __TZ_set_PSP_NS(rtpox_context.esr_psp);
+    rtpox_context.ns_psplim = (uint32_t )__TZ_get_PSPLIM_NS();
 }
 
+
+void __force_inline rtpox_save_esr_context(){
+    rtpox_context.esr_psp = (uint32_t )__TZ_get_PSP_NS();
+    rtpox_context.esr_psplim = (uint32_t )__TZ_get_PSPLIM_NS();
+}
+
+void __force_inline rtpox_restore_ns_psp_context(){
+    __TZ_set_PSP_NS(rtpox_context.ns_psp);
+    __TZ_set_PSPLIM_NS(rtpox_context.ns_psplim);
+}
+
+void __force_inline rtpox_restore_esr_context(){
+    __TZ_set_PSP_NS(rtpox_context.esr_psp);
+    __TZ_set_PSPLIM_NS(rtpox_context.esr_psplim);
+}
+
+__force_inline void rtpox_switch_psp_ns_to_esr(){
+    // rtpox_context.ns_psp = (uint32_t )__TZ_get_PSP_NS();
+    // rtpox_context.ns_psplim = (uint32_t )__TZ_get_PSPLIM_NS();
+    // __TZ_set_PSP_NS(rtpox_context.esr_psp);
+    // __TZ_set_PSPLIM_NS(rtpox_context.esr_psplim);
+    rtpox_save_ns_psp_context();
+    rtpox_restore_esr_context();
+}
+
+__force_inline void _rtpox_switch_resume_to_esr(){
+    // __TZ_set_PSP_NS(rtpox_context.esr_psp);
+    // __TZ_set_PSPLIM_NS(rtpox_context.esr_psplim);
+    rtpox_restore_esr_context();
+}
+
+void rtpox_switch_esr_to_resume(){
+    rtpox_expand();
+    rtpox_switch_psp_esr_to_ns();
+    rtpox_switch_vtor_esr_to_ns();
+}
 
 void rtpox_switch_esr_to_ns(){
     rtpox_expand();
@@ -208,7 +247,56 @@ void rtpox_switch_ns_psp_to_esr(){
     rtpox_switch_vtor_ns_to_esr();
 }
 
+void rtpox_switch_resume_to_esr(){
+    _rtpox_switch_resume_to_esr();
+    rtpox_switch_vtor_ns_to_esr();
+    rtpox_shrink();
+}
 
+__force_inline void rtpox_set_syscall_func(){
+
+    rtpox_save_esr_context();
+
+
+    uint32_t * nspsp = (uint32_t *)ADDR_rtpox_st_tmp_reserved + ADDR_rtpox_st_tmp_reserved_size - 20;
+
+    // uint32_t new_address = (uint32_t) ADDR_rtpox_st_tmp_reserved + ADDR_rtpox_st_tmp_reserved_size - 20;
+    __TZ_set_PSP_NS((uint32_t) nspsp);
+    __TZ_set_PSPLIM_NS(ADDR_rtpox_st_tmp_reserved);
+    uint32_t * esrpsp = (uint32_t *)rtpox_context.esr_psp;
+
+    esrpsp[6] += 2; // change return address to next instruction
+
+    nspsp[7] = 0x1000000;
+    nspsp[6] = (uint32_t) ADDR_rtpox_sc_dispatch;\
+    nspsp[0] = esrpsp[0]; // copy r0
+
+    
+    uint8_t * destaddr = (uint8_t*) (ADDR_rtpox_st_tmp_reserved + ADDR_rtpox_st_tmp_reserved_size - 12);
+    nspsp[1] = (uint32_t) destaddr; // copy syscall args address
+
+    uint8_t * srcaddr =  (uint8_t *)esrpsp[1];
+
+    // copy syscall args
+    memcpy( destaddr, srcaddr, 20);
+    
+}
+
+void rtpox_switch_esr_to_syscall(){
+
+    
+    // char *stack = rtpox_context.esr_psp;
+    // stack[6] += 2; 
+    
+    // change return address to next instruction
+    // char *stack = (char*)rtpox_context.esr_psp; 
+    // stack[6] += 2;
+
+    rtpox_set_syscall_func();
+
+    rtpox_switch_vtor_esr_to_ns();
+    rtpox_expand();
+}
 
 
 rtpox_error_t rtpox_init(uint32_t return_address)
@@ -239,17 +327,11 @@ rtpox_error_t rtpox_init(uint32_t return_address)
     
     // rtpox_init_esr_psp();
     
-    
     // Copy ns vtor to 
     rtpox_copy_vtor();
     rtpox_config_esr_vtor();
     
-    
-    // rtpox_shrink(); 
-    // rtpox_switch_ns_psp_to_esr();
-    // rtpox_switch_vtor_ns_to_esr();
     rtpox_switch_ns_psp_to_esr();
-
 
     __enable_irq();
     
@@ -272,7 +354,6 @@ rtpox_error_t rtpox_exit(void)
     
     rtpox_switch_vtor_esr_to_ns();
     rtpox_shrink();
-
 
     //enable interrupt
     __enable_irq();

@@ -35,14 +35,13 @@
 #include "hardware/clocks.h"
 #include "hardware/structs/sio.h"
 
+
 /* TZ_START_NS: Start address of non-secure application */
 #ifndef TZ_START_NS
 #define TZ_START_NS (0x10100000)
 #endif
  
-
 uint32_t secure_psp_reserve[200];
-
 
 /* typedef for non-secure callback functions */
 typedef void (*funcptr_void) (void) __attribute__((cmse_nonsecure_call));
@@ -59,6 +58,18 @@ void config_peripherals_be_accessible_by_ns(){
   accessctrl_hw->ticks = ACCESSCTRL_PASSWORD_BITS | 0xFF; // TICKS accessible by everybody
   // accessctrl_hw->usb = ACCESSCTRL_PASSWORD_BITS | 0xFF; // XIP_CTRL accessible by everybody  
 } 
+
+void config_hardfault_NMI_busfault_only_secure(){
+  // Set hardfault, NMI and busfault to be handled in secure mode
+  scb_hw->aircr &= ~(0x1U << 13);
+  // // Enable fault handlers
+  // scb_hw->shcsr |= SCB_SHCSR_USGFAULTENA_Msk
+  //             |  SCB_SHCSR_BUSFAULTENA_Msk
+  //             |  SCB_SHCSR_MEMFAULTENA_Msk
+  //             |  SCB_SHCSR_SECUREFAULTENA_Msk;  
+}
+
+
 
 #define SYSCLOCK_FREQ 120000 // 120MHz
 #define SYSTICK_INTERRUPT_ID 15 // SysTick interrupt ID
@@ -105,6 +116,9 @@ int main(void) {
   // Set up the peripheral access control
   config_peripherals_be_accessible_by_ns();
   
+  // Set up the fault handlers to secure only
+  config_hardfault_NMI_busfault_only_secure();
+
   // init_systimers()
   sc_trustzone_init();
 

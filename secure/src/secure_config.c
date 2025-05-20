@@ -37,12 +37,6 @@ void configure_sau(void)
     SAU->CTRL = SAU_CTRL_ENABLE_Msk;
 }
 
-
-
-
-
-
-
 void system_init(void){
     /* Init float registers */  
     SCB->CPACR |= (0xF << 20);        // Enable CP10 and CP11 full access
