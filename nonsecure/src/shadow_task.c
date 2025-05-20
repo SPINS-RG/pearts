@@ -43,7 +43,7 @@ __force_inline void __syscall(esr_syscall_id_t syscall_id, esr_syscall_arg_t *ar
 
 /*
 #################################
-Tasks run as Secure Region
+Tasks run as ESR Region
 #################################
 */
 
